@@ -5,6 +5,11 @@ import clsx from "clsx";
 import { ScannerEntry, QUBOResult } from "@/types";
 import { shortQuestion } from "@/lib/utils";
 
+interface Props {
+  candidates: ScannerEntry[];
+  onClear: () => void;
+}
+
 function Stat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="rounded-lg border p-2.5 text-center"
