@@ -85,7 +85,7 @@ export function QuantumPanel({ candidates, onClear }: Props) {
             QUBO Portfolio Optimizer
           </p>
           <p className="text-xs mt-0.5" style={{ color: "var(--text-subtle)" }}>
-            Simulated Annealing · {candidates.length} candidates loaded
+            {candidates.length <= QAOA_MAX_QUBITS ? `QAOA p=1 · ${candidates.length} qubits` : `SA fallback · ${candidates.length} vars`} loaded
           </p>
         </div>
         <button onClick={onClear} className="text-xs transition-colors hover:opacity-70"
@@ -283,9 +283,20 @@ export function QuantumPanel({ candidates, onClear }: Props) {
               )}
             </div>
 
-            <p className="text-[10px] text-center" style={{ color: "var(--text-subtle)" }}>
-              SA-QUBO · {SA_RESTARTS_DISPLAY} restarts · H = {result.finalEnergy.toFixed(4)}
-            </p>
+            {/* Solver info */}
+            <div className="rounded-lg border px-3 py-2"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+              {result.solver === "qaoa" ? (
+                <p className="text-[10px] font-mono leading-relaxed" style={{ color: "var(--text-subtle)" }}>
+                  QAOA p=1 · {result.numQubits} qubits · H⊗ → UC(γ={result.gamma?.toFixed(3)}) → UM(β={result.beta?.toFixed(3)}) → measure
+                  &nbsp;·&nbsp; H = {result.finalEnergy.toFixed(4)}
+                </p>
+              ) : (
+                <p className="text-[10px] font-mono" style={{ color: "var(--text-subtle)" }}>
+                  SA fallback ({result.numQubits} vars &gt; {QAOA_MAX_QUBITS} qubit limit) · {result.iterations.toLocaleString()} iters · H = {result.finalEnergy.toFixed(4)}
+                </p>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -293,4 +304,4 @@ export function QuantumPanel({ candidates, onClear }: Props) {
   );
 }
 
-const SA_RESTARTS_DISPLAY = 5;
+const QAOA_MAX_QUBITS = 16;

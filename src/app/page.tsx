@@ -134,11 +134,12 @@ export default function HomePage() {
   const [loadingMarkets, setLoadingMarkets] = useState(true);
   const [loadingData, setLoadingData]       = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [optimizerCandidates, setOptimizerCandidates] = useState<ScannerEntry[]>([]);
 
-  // UTC clock
+  // UTC clock — initialized client-side only to avoid SSR hydration mismatch
   useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -254,10 +255,10 @@ export default function HomePage() {
             {tab === "lab" && (
               <div className="flex flex-col items-end leading-none gap-0.5">
                 <span className="text-[11px] font-mono font-semibold tabular-nums" style={{ color: "var(--accent)" }}>
-                  {now.toUTCString().slice(17, 25)} UTC
+                  {now ? now.toUTCString().slice(17, 25) : "--:--:--"} UTC
                 </span>
                 <span className="text-[8.5px] font-mono" style={{ color: "var(--text-subtle)" }}>
-                  {now.toDateString()}
+                  {now ? now.toDateString() : ""}
                 </span>
               </div>
             )}

@@ -97,6 +97,11 @@ export interface QUBOResult {
   edgeVector: number[];
   finalEnergy: number;
   iterations: number;
+  // QAOA-specific fields (present when solver === "qaoa")
+  solver: "qaoa" | "sa";
+  gamma?: number;   // optimized cost unitary angle
+  beta?: number;    // optimized mixer angle
+  numQubits?: number;
 }
 
 // ── Backtester ────────────────────────────────────────────────────────────────
