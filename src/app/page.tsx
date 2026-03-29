@@ -21,8 +21,9 @@ import { StatCard } from "@/components/StatCard";
 import { ScannerPanel } from "@/components/ScannerPanel";
 import { QuantumPanel } from "@/components/QuantumPanel";
 import { BacktestPanel } from "@/components/BacktestPanel";
+import { LiveTraderPanel } from "@/components/LiveTraderPanel";
 
-type Tab = "lab" | "scanner" | "backtest";
+type Tab = "lab" | "scanner" | "backtest" | "live";
 
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>("lab");
@@ -165,6 +166,11 @@ export default function HomePage() {
                   label: "Backtester",
                   icon: "M2 8 L5 4 L8 6 L11 2 L13 4 M2 12 h11",
                 },
+                {
+                  id: "live",
+                  label: "Live Trader",
+                  icon: "M12 3 C12 3 9 6 9 9 C9 12 12 13 12 13 C12 13 15 12 15 9 C15 6 12 3 12 3 M4 12 h2 M10 12 h2",
+                },
               ] as { id: Tab; label: string; icon: string }[]
             ).map(({ id, label, icon }) => (
               <button
@@ -193,6 +199,9 @@ export default function HomePage() {
                   />
                 </svg>
                 {label}
+                {id === "live" && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                )}
                 {tab === id && (
                   <span
                     className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
@@ -408,6 +417,12 @@ export default function HomePage() {
       {tab === "backtest" && (
         <div className="flex flex-1 min-w-0 overflow-hidden">
           <BacktestPanel />
+        </div>
+      )}
+
+      {tab === "live" && (
+        <div className="flex flex-1 min-w-0 overflow-hidden">
+          <LiveTraderPanel />
         </div>
       )}
     </div>
