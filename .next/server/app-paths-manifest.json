@@ -1,9 +1,5 @@
 {
-  "/api/optimize/route": "app/api/optimize/route.js",
-  "/api/backtest/route": "app/api/backtest/route.js",
-  "/api/orderbook/route": "app/api/orderbook/route.js",
-  "/api/history/route": "app/api/history/route.js",
-  "/api/scanner/route": "app/api/scanner/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/page": "app/page.js",
-  "/api/quantum/route": "app/api/quantum/route.js"
+  "/api/markets/route": "app/api/markets/route.js"
 }
