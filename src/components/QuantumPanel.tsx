@@ -20,8 +20,35 @@ function Stat({ label, value, accent = false }: { label: string; value: string; 
   );
 }
 
+function SliderRow({
+  label, valueFmt, min, max, step, value, onChange, subLeft, subRight,
+}: {
+  label: string;
+  valueFmt: React.ReactNode;
+  min: number; max: number; step: number; value: number;
+  onChange: (v: number) => void;
+  subLeft: string; subRight: string;
+}) {
+  return (
+    <div className="rounded-lg border p-3"
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <label className="text-xs block mb-2" style={{ color: "var(--text-muted)" }}>
+        {label} = {valueFmt}
+      </label>
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={e => onChange(parseFloat(e.target.value))}
+        className="w-full" style={{ accentColor: "var(--accent)" }} />
+      <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--text-subtle)" }}>
+        <span>{subLeft}</span><span>{subRight}</span>
+      </div>
+    </div>
+  );
+}
+
 export function QuantumPanel({ candidates, onClear }: Props) {
-  const [lambda, setLambda] = useState(0.5);
+  const [corrLambda, setCorrLambda] = useState(0.05);
+  const [riskLambda, setRiskLambda] = useState(0.08);
+  const [bankroll, setBankroll] = useState(200);
   const [maxPositions, setMaxPositions] = useState(5);
   const [result, setResult] = useState<QUBOResult | null>(null);
   const [running, setRunning] = useState(false);
@@ -33,15 +60,19 @@ export function QuantumPanel({ candidates, onClear }: Props) {
       const res = await fetch("/api/quantum", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidates, lambda, maxPositions }),
+        body: JSON.stringify({
+          candidates,
+          lambda: corrLambda,
+          maxPositions,
+          riskLambda,
+          bankroll,
+        }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error ?? "Optimizer failed"); }
       setResult(await res.json());
     } catch (e: any) { setError(e.message ?? "Unknown error"); }
     finally { setRunning(false); }
-  }, [candidates, lambda, maxPositions]);
-
-  const corrThreshold = Math.max(0.05, 1 - lambda).toFixed(2);
+  }, [candidates, corrLambda, riskLambda, bankroll, maxPositions]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -51,10 +82,10 @@ export function QuantumPanel({ candidates, onClear }: Props) {
         style={{ borderColor: "var(--border)" }}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text)" }}>
-            Portfolio Optimizer
+            QUBO Portfolio Optimizer
           </p>
           <p className="text-xs mt-0.5" style={{ color: "var(--text-subtle)" }}>
-            Greedy edge-maximisation · {candidates.length} candidates loaded
+            Simulated Annealing · {candidates.length} candidates loaded
           </p>
         </div>
         <button onClick={onClear} className="text-xs transition-colors hover:opacity-70"
@@ -65,44 +96,52 @@ export function QuantumPanel({ candidates, onClear }: Props) {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
-        {/* Controls */}
+        {/* Controls — row 1 */}
         <div className="grid grid-cols-2 gap-3">
-          {[
-            {
-              label: "De-correlation strength",
-              value: <><span style={{ color: "var(--accent)" }} className="font-semibold">{lambda.toFixed(2)}</span>
-                <span className="ml-1 text-[10px]" style={{ color: "var(--text-subtle)" }}>(threshold {corrThreshold})</span></>,
-              slider: { min: 0, max: 0.95, step: 0.05, val: lambda, set: setLambda },
-              sub: ["0 — pure edge", "0.95 — max diversity"],
-            },
-            {
-              label: "Max positions",
-              value: <span style={{ color: "var(--accent)" }} className="font-semibold">{maxPositions}</span>,
-              slider: { min: 1, max: Math.min(10, candidates.length), step: 1, val: maxPositions, set: setMaxPositions },
-              sub: ["1", String(Math.min(10, candidates.length))],
-            },
-          ].map(({ label, value, slider, sub }) => (
-            <div key={label} className="rounded-lg border p-3"
-              style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <label className="text-xs block mb-2" style={{ color: "var(--text-muted)" }}>
-                {label} = {value}
-              </label>
-              <input type="range" min={slider.min} max={slider.max} step={slider.step}
-                value={slider.val}
-                onChange={e => slider.set(parseFloat(e.target.value) as any)}
-                className="w-full" style={{ accentColor: "var(--accent)" }} />
-              <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--text-subtle)" }}>
-                <span>{sub[0]}</span><span>{sub[1]}</span>
-              </div>
-            </div>
-          ))}
+          <SliderRow
+            label="Correlation penalty λ_corr"
+            valueFmt={<span style={{ color: "var(--accent)" }} className="font-semibold">{corrLambda.toFixed(3)}</span>}
+            min={0} max={0.30} step={0.005} value={corrLambda}
+            onChange={setCorrLambda}
+            subLeft="0 — ignore overlap" subRight="0.30 — avoid all"
+          />
+          <SliderRow
+            label="Risk penalty λ_risk"
+            valueFmt={<span style={{ color: "var(--accent)" }} className="font-semibold">{riskLambda.toFixed(3)}</span>}
+            min={0} max={0.30} step={0.005} value={riskLambda}
+            onChange={setRiskLambda}
+            subLeft="0 — ignore spread" subRight="0.30 — avoid wide"
+          />
         </div>
 
-        {/* Objective */}
+        {/* Controls — row 2 */}
+        <div className="grid grid-cols-2 gap-3">
+          <SliderRow
+            label="Bankroll"
+            valueFmt={<span style={{ color: "var(--accent)" }} className="font-semibold">${bankroll}</span>}
+            min={25} max={500} step={25} value={bankroll}
+            onChange={setBankroll}
+            subLeft="$25" subRight="$500"
+          />
+          <SliderRow
+            label="Max positions"
+            valueFmt={<span style={{ color: "var(--accent)" }} className="font-semibold">{maxPositions}</span>}
+            min={1} max={Math.min(10, Math.max(1, candidates.length))} step={1} value={maxPositions}
+            onChange={setMaxPositions}
+            subLeft="1" subRight={String(Math.min(10, Math.max(1, candidates.length)))}
+          />
+        </div>
+
+        {/* QUBO objective */}
         <div className="rounded-lg border px-3 py-2"
           style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-          <p className="text-[10px] font-mono" style={{ color: "var(--text-subtle)" }}>
-            Objective: max ∑ edge&#x2093;·x&#x2093; &nbsp;s.t.&nbsp; corr(i,j) &lt; {corrThreshold} for all selected pairs,&nbsp; ∑ x&#x2093; ≤ {maxPositions}
+          <p className="text-[10px] font-mono leading-relaxed" style={{ color: "var(--text-subtle)" }}>
+            H(x) = −∑ edge&#x2093;·x&#x2093;
+            &nbsp;+&nbsp; {riskLambda.toFixed(3)}·∑ risk&#x2093;·x&#x2093;
+            &nbsp;+&nbsp; {corrLambda.toFixed(3)}·∑&#x1D62;&#x2C7C; corr&#x1D62;&#x2C7C;·x&#x2093;·x&#x2C7C;
+            <br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp; 10·(∑ size&#x2093;·x&#x2093; − ${bankroll})²₊
+            &nbsp;+&nbsp; 10·(∑ x&#x2093; − {maxPositions})²₊
           </p>
         </div>
 
@@ -110,7 +149,7 @@ export function QuantumPanel({ candidates, onClear }: Props) {
         <button onClick={runOptimizer} disabled={running || candidates.length === 0}
           className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all text-white hover:opacity-90 disabled:opacity-40"
           style={{ background: "var(--accent)" }}>
-          {running ? "Running optimizer…" : "Run Portfolio Optimizer"}
+          {running ? "Running SA-QUBO…" : "Run QUBO Optimizer"}
         </button>
 
         {error && (
@@ -120,15 +159,15 @@ export function QuantumPanel({ candidates, onClear }: Props) {
         {result && (
           <>
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <Stat label="Selected" value={`${result.selected.length} / ${candidates.length}`} accent />
               <Stat label="Total Edge" value={`+${(result.totalEdge * 100).toFixed(1)}%`} accent />
-              <Stat label="Avg Overlap" value={`${(result.totalRisk * 100).toFixed(0)}%`} />
+              <Stat label="Corr Risk" value={`${(result.totalRisk * 100).toFixed(0)}%`} />
+              <Stat label="SA Iters" value={result.iterations.toLocaleString()} />
             </div>
 
-            {/* Topic overlap table */}
+            {/* Correlation overlap table */}
             {candidates.length <= 20 && (() => {
-              // Collect all pairs with meaningful overlap
               const pairs: { i: number; j: number; val: number }[] = [];
               result.correlationMatrix.forEach((row, i) =>
                 row.forEach((val, j) => {
@@ -219,7 +258,7 @@ export function QuantumPanel({ candidates, onClear }: Props) {
                 Optimal Portfolio ({result.selected.length} positions)
               </p>
               {result.selected.length === 0 ? (
-                <p className="text-xs" style={{ color: "var(--text-subtle)" }}>No trades selected — try lowering λ</p>
+                <p className="text-xs" style={{ color: "var(--text-subtle)" }}>No trades selected — try lowering λ_corr or increasing bankroll</p>
               ) : (
                 <div className="space-y-1.5">
                   {result.selected.map(entry => (
@@ -245,7 +284,7 @@ export function QuantumPanel({ candidates, onClear }: Props) {
             </div>
 
             <p className="text-[10px] text-center" style={{ color: "var(--text-subtle)" }}>
-              Greedy de-correlated selection · objective H = {result.finalEnergy.toFixed(4)}
+              SA-QUBO · {SA_RESTARTS_DISPLAY} restarts · H = {result.finalEnergy.toFixed(4)}
             </p>
           </>
         )}
@@ -253,3 +292,5 @@ export function QuantumPanel({ candidates, onClear }: Props) {
     </div>
   );
 }
+
+const SA_RESTARTS_DISPLAY = 5;
